@@ -49,7 +49,7 @@ cli-relay run "почини падающий тест в tests/test_api.py" --cw
 |---|---|---|---|---|
 | `claude` | Claude Code `claude -p --output-format stream-json` | проверен вживую | `--resume` | окна five_hour / seven_day |
 | `antigravity` | Google Antigravity `agy -p --output-format stream-json` | проверен вживую | `--conversation` | по тексту ошибки |
-| `codex` | OpenAI Codex `codex exec --json` | **экспериментальный** (по документации) | `exec resume` | по тексту ошибки |
+| `codex` | OpenAI Codex `codex exec --json` (на Windows находит и копию из десктопного приложения Codex) | флаги и обработка лимита проверены вживую на 0.167; успешный ответ — по документации | `exec resume` | по тексту ошибки, включая «try again at 11:05 AM» |
 | `openai` | любой OpenAI-совместимый `/chat/completions` (OpenRouter, vLLM, Ollama, LM Studio…) | проверен на локальном сервере | — | HTTP 429 + `Retry-After` |
 
 Тип `openai` — это только текстовый резерв: инструментов у него нет, файлы он править не умеет.

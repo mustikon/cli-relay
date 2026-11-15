@@ -13,7 +13,11 @@ All notable changes to this project are documented here. The format follows
   auth errors, missing CLIs and generic errors (configurable).
 - Adapters for Claude Code (`claude -p --output-format stream-json`), Google Antigravity
   (`agy -p --output-format stream-json`) and any OpenAI-compatible chat endpoint.
-- Experimental adapter for OpenAI Codex (`codex exec --json`).
+- Adapter for OpenAI Codex (`codex exec --json`); on Windows it also finds the `codex.exe`
+  bundled with the Codex desktop app. Command layout and the rate-limit path are verified
+  against codex-cli 0.167.
+- Reset times are parsed from "in 2h 30m", wall-clock ("try again at 11:05 AM",
+  "resets 3pm") and epoch formats.
 - Normalised event stream: `started`, `text_delta`, `tool_activity`, `quota_info`,
   `completed`, `failed`, `skipped`, `waiting`, `switched`.
 - Persistent quota tracker: remembers limits and reset times; skips a provider

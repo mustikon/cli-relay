@@ -81,9 +81,39 @@ def test_codex_reads_stdin_and_resumes() -> None:
     inv = adapter.build(
         Task(prompt="hi", resume={"codex": "T1"}, permission=Permission.FULL), ["codex"]
     )
-    assert inv.argv[:4] == ["codex", "exec", "resume", "T1"]
-    assert inv.argv[-1] == "-" and inv.stdin == b"hi"
-    assert "--approve-for-me" in inv.argv
+    # verified against codex-cli 0.167: exec options go before `resume`, which rejects them
+    assert inv.argv == [
+        "codex", "exec", "--sandbox", "workspace-write", "--approve-for-me",
+        "resume", "T1", "--json", "--skip-git-repo-check", "-",
+    ]  # fmt: skip
+    assert inv.stdin == b"hi"
+    plain = adapter.build(Task(prompt="hi"), ["codex"]).argv
+    assert plain == [
+        "codex", "exec", "--sandbox", "read-only", "--json", "--skip-git-repo-check", "-",
+    ]  # fmt: skip
+
+
+def test_codex_desktop_bundle_discovery(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import os
+    import time as _time
+
+    from cli_relay.adapters import codex as codex_mod
+
+    old = tmp_path / "OpenAI" / "Codex" / "bin" / "aaa" / "codex.exe"
+    new = tmp_path / "OpenAI" / "Codex" / "bin" / "bbb" / "codex.exe"
+    for path in (old, new):
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"")
+    past = _time.time() - 3600
+    os.utime(old, (past, past))
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setattr("cli_relay.adapters.base.resolve", lambda command: None)  # not on PATH
+    assert codex_mod.desktop_bundled_codex() == new
+    assert CodexAdapter(settings("codex")).command() == [str(new)]
+    # an explicit command is never second-guessed
+    explicit = CodexAdapter(settings("codex", command=["my-codex"]))
+    assert explicit.command() is None
 
 
 def test_cmd_shim_guard(monkeypatch: pytest.MonkeyPatch) -> None:

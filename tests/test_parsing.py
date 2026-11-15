@@ -121,6 +121,20 @@ def test_codex_success_and_failure() -> None:
     assert failed.resets_at is not None
 
 
+def test_codex_real_rate_limit_stream() -> None:
+    """Captured from codex-cli 0.167 on a ChatGPT plan that had hit its limit."""
+    adapter = CodexAdapter(ProviderSettings(name="codex", type="codex"))
+    events, _ = parse_fixture(adapter, "codex_rate_limited.ndjson")
+    # config warnings arrive as `item.completed` items of type "error" and are ignored
+    assert as_types(events) == ["started", "failed"]
+    failed = events[-1]
+    assert isinstance(failed, Failed) and failed.kind is FailureKind.RATE_LIMIT
+    assert failed.session_id == "01a1de50-3c76-7f03-b0a9-94d771900716"
+    assert failed.message.count("hit your usage limit") == 1
+    assert failed.resets_at is not None  # "try again at 11:05 AM"
+    assert time.localtime(failed.resets_at)[3:5] == (11, 5)
+
+
 def test_classify_and_reset_hint() -> None:
     assert classify("Error: 429 Too Many Requests") is FailureKind.RATE_LIMIT
     assert classify("RESOURCE_EXHAUSTED") is FailureKind.RATE_LIMIT
@@ -133,3 +147,20 @@ def test_classify_and_reset_hint() -> None:
     assert reset_hint("resets after 15 minutes", now) == now + 900
     assert reset_hint("found in 5 more files", now) is None
     assert reset_hint("limit|1794743400", 1_700_000_000) == 1794743400
+
+
+def test_reset_hint_wall_clock() -> None:
+    base = time.mktime((2026, 11, 15, 9, 0, 0, 0, 0, -1))  # 09:00 local
+
+    def hm(epoch: float | None) -> tuple[int, int, int]:
+        assert epoch is not None
+        t = time.localtime(epoch)
+        return t.tm_mday, t.tm_hour, t.tm_min
+
+    assert hm(reset_hint("try again at 11:05 AM.", base)) == (15, 11, 5)
+    assert hm(reset_hint("You've hit your limit · resets 3pm", base)) == (15, 15, 0)
+    assert hm(reset_hint("resets at 15:30", base)) == (15, 15, 30)
+    assert hm(reset_hint("try again at 8:15 a.m.", base)) == (16, 8, 15)  # passed -> tomorrow
+    assert hm(reset_hint("resets 12am", base)) == (16, 0, 0)
+    assert reset_hint("look at 5 files", base) is None
+    assert reset_hint("at 25:00", base) is None

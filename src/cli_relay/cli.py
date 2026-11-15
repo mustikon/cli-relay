@@ -221,7 +221,10 @@ def _status(args: argparse.Namespace, config: Config) -> int:
         line = f"  {row['provider']:<14} {state:<12}"
         if row["blocked_until"]:
             until = time.strftime("%Y-%m-%d %H:%M", time.localtime(row["blocked_until"]))
-            line += f" until {until} ({row['blocked_reason']})"
+            reason = " ".join(str(row["blocked_reason"]).split())
+            if len(reason) > 80:
+                reason = reason[:79] + "…"
+            line += f" until {until} ({reason})"
         elif not row["available"]:
             line += f" {row['reason']}"
         for name, window in row["windows"].items():

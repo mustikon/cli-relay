@@ -54,7 +54,7 @@ cli-relay run "fix the failing test in tests/test_api.py" --cwd ~/code/app --per
 |---|---|---|---|---|
 | `claude` | Claude Code `claude -p --output-format stream-json` | verified live | `--resume` | five-hour / weekly windows |
 | `antigravity` | Google Antigravity `agy -p --output-format stream-json` | verified live | `--conversation` | from error text |
-| `codex` | OpenAI Codex `codex exec --json` | **experimental** (built from docs) | `exec resume` | from error text |
+| `codex` | OpenAI Codex `codex exec --json` (also finds the copy bundled with the Codex desktop app on Windows) | command layout and limit path verified live on 0.167; success path from docs | `exec resume` | from error text, incl. "try again at 11:05 AM" |
 | `openai` | any OpenAI-compatible `/chat/completions` (OpenRouter, vLLM, Ollama, LM Studio…) | tested with a local server | — | HTTP 429 + `Retry-After` |
 
 The `openai` type is a **text-only** fallback: it has no tools and cannot edit files.

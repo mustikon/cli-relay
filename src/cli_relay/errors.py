@@ -28,6 +28,11 @@ _IN_DURATION = re.compile(
     re.IGNORECASE,
 )
 _EPOCH = re.compile(r"\b(1[6-9]\d{8})\b")
+# "try again at 11:05 AM", "resets 3pm", "resets at 15:30" (local wall-clock time)
+_CLOCK = re.compile(
+    r"\b(?:at|resets?(?:\s+at)?)\s+(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m\.?)?(?![\w:])",
+    re.IGNORECASE,
+)
 
 
 def classify(*texts: object) -> FailureKind:
@@ -51,4 +56,30 @@ def reset_hint(text: str, now: float | None = None) -> float | None:
         value = float(epoch.group(1))
         if value > now:
             return value
+    for match in _CLOCK.finditer(text):
+        clock = _next_clock_time(match, now)
+        if clock is not None:
+            return clock
     return None
+
+
+def _next_clock_time(match: re.Match[str], now: float) -> float | None:
+    hour, minute, ampm = int(match.group(1)), match.group(2), match.group(3)
+    if minute is None and ampm is None:
+        return None  # a bare number ("at 5") is too ambiguous
+    if ampm:
+        if not 1 <= hour <= 12:
+            return None
+        hour = hour % 12 + (12 if ampm.lower().startswith("p") else 0)
+    elif hour > 23:
+        return None
+    mins = int(minute or 0)
+    if mins > 59:
+        return None
+    local = time.localtime(now)
+    target = time.mktime((local.tm_year, local.tm_mon, local.tm_mday, hour, mins, 0, 0, 0, -1))
+    if target <= now:  # already passed today -> tomorrow
+        target = time.mktime(
+            (local.tm_year, local.tm_mon, local.tm_mday + 1, hour, mins, 0, 0, 0, -1)
+        )
+    return target
