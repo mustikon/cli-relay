@@ -1,0 +1,2 @@
+{"event": "init", "conversation_id": "9255eb39-ebf3-4f1f-a8f3-55e9e0334d45", "init": {"cwd": "/home/user/project"}}
+{"event": "result", "result": {"conversation_id": "9255eb39-ebf3-4f1f-a8f3-55e9e0334d45", "status": "ERROR", "error": "RESOURCE_EXHAUSTED: quota exceeded, try again in 2h 5m", "response": ""}}

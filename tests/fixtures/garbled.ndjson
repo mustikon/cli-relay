@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "session_id": "2aff023c-19fb-46ef-86b2-712257b4b519", "model": "m"}
+progress: 50% {"type":"stream_event","event":{"type":"content_block_delta","delta":{"type":"text_delta","text":"hi"}}} trailing junk
+{"type":"result","subtype":"succ{"type":"rate_limit_event","rate_limit_info":{"unifiedWindows":{"five_hour":{"utilization":0.5,"resetsAt":1794743400,"status":"allowed"}}}}
+not json at all

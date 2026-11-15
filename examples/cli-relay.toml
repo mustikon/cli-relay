@@ -1,0 +1,50 @@
+# cli-relay configuration example.
+# Copy to ./cli-relay.toml, %APPDATA%\cli-relay\config.toml (Windows)
+# or ~/.config/cli-relay/config.toml (Linux/macOS).
+
+# Providers are tried in this order.
+order = ["claude", "antigravity", "codex", "openrouter", "local"]
+
+[relay]
+# If a provider is rate-limited but resets within this many seconds, wait for it
+# instead of moving on. 0 = never wait.
+wait_if_reset_within_s = 900
+# Skip a provider pre-emptively when one of its reported usage windows is at or above
+# this fraction (Claude Code reports five_hour / seven_day utilization). false = off.
+skip_above_utilization = 0.97
+# How long to treat a provider as limited when its error carries no reset time.
+default_cooldown_s = 1800
+# Failure kinds that make the relay try the next provider.
+switch_on = ["rate_limit", "auth", "not_installed", "error"]
+# Also write HANDOFF.md into the task's --cwd when switching mid-task.
+write_handoff_file = false
+# state_path = "~/cli-relay-state.json"
+
+[mcp]
+# Highest permission an MCP client may request via relay_run. Keep read_only unless you
+# trust every MCP client: otherwise a sandboxed agent could escalate by delegating.
+max_permission = "read_only"
+
+[providers.claude]
+# type defaults to the section name for claude / antigravity / codex
+model = "opus"
+permission = "edit"           # upper bound; a task never gets more on this provider
+# extra_args = ["--effort", "high"]
+# command = ["wsl", "-e", "claude"]   # run the CLI somewhere else
+
+[providers.antigravity]
+# model = "..."
+
+[providers.codex]
+# experimental adapter
+
+[providers.openrouter]
+type = "openai"               # text-only fallback, no tools
+base_url = "https://openrouter.ai/api/v1"
+model = "vendor/model-id"     # any OpenRouter model id
+api_key_env = "OPENROUTER_API_KEY"
+
+[providers.local]
+type = "openai"
+base_url = "http://127.0.0.1:8000/v1"   # vLLM, Ollama (http://127.0.0.1:11434/v1), LM Studio
+model = "your-served-model-name"

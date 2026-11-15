@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cli-relay"
+dynamic = ["version"]
+description = "Run coding-agent CLIs (Claude Code, Antigravity, Codex, any OpenAI-compatible API) as one worker with automatic fallback when a subscription hits its limit."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "mustikon" }]
+keywords = ["claude-code", "codex", "antigravity", "gemini", "agents", "fallback", "rate-limit", "mcp", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Typing :: Typed",
+]
+# The core has no third-party dependencies on purpose (supply-chain surface).
+dependencies = []
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.10,<2"]
+
+[project.scripts]
+cli-relay = "cli_relay.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mustikon/cli-relay"
+Issues = "https://github.com/mustikon/cli-relay/issues"
+Changelog = "https://github.com/mustikon/cli-relay/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[tool.hatch.version]
+path = "src/cli_relay/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cli_relay"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "docs", "examples", "README.md", "README.ru.md", "CHANGELOG.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "S"]
+ignore = ["S603", "S607", "S101"]  # subprocesses by design (never via a shell); asserts narrow types
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S108", "E501", "RUF012"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["mcp.*"]
+ignore_missing_imports = true

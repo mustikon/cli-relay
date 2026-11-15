@@ -1,0 +1,31 @@
+# Changelog
+
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
+[Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+## [0.1.0] - 2026-11-15
+
+### Added
+- `Relay`: runs a task on the first available provider and falls back on rate limits,
+  auth errors, missing CLIs and generic errors (configurable).
+- Adapters for Claude Code (`claude -p --output-format stream-json`), Google Antigravity
+  (`agy -p --output-format stream-json`) and any OpenAI-compatible chat endpoint.
+- Experimental adapter for OpenAI Codex (`codex exec --json`).
+- Normalised event stream: `started`, `text_delta`, `tool_activity`, `quota_info`,
+  `completed`, `failed`, `skipped`, `waiting`, `switched`.
+- Persistent quota tracker: remembers limits and reset times; skips a provider
+  pre-emptively when a reported usage window is nearly exhausted.
+- Mid-task handoff: the next provider receives the original task, actions taken and the
+  last output, plus an instruction to inspect the working tree first.
+- Permission levels (`read_only`, `edit`, `full`) mapped to each CLI's own flags, with a
+  per-provider upper bound.
+- `cli-relay` command (`run`, `status`, `reset`, `mcp`) with text and NDJSON output.
+- MCP server (`cli-relay[mcp]`) with `relay_run` and `relay_status` tools. Permissions
+  requested over MCP are capped by `[mcp] max_permission` (default `read_only`).
+- TOML configuration.
+
+[Unreleased]: https://github.com/mustikon/cli-relay/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mustikon/cli-relay/releases/tag/v0.1.0
