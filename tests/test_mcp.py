@@ -25,7 +25,13 @@ def make_config(tmp_path: Path, fixture: str) -> config_mod.Config:
 
 
 def payload(result: object) -> dict[str, object]:
-    # FastMCP returns (content_blocks, structured) for dict-returning tools
+    # mcp 2.x: CallToolResult with .structured_content / .content
+    structured = getattr(result, "structured_content", None)
+    if isinstance(structured, dict):
+        return structured.get("result", structured)  # type: ignore[return-value]
+    if hasattr(result, "content") and not isinstance(result, tuple):
+        result = result.content
+    # mcp 1.x: (content_blocks, structured) for dict-returning tools
     if isinstance(result, tuple):
         result = result[1] if isinstance(result[1], dict) else result[0]
     if isinstance(result, dict):

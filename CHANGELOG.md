@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-15
+
+### Changed
+- The MCP server supports the MCP Python SDK 2.x (`MCPServer`) as well as 1.x
+  (`FastMCP`); the `mcp` extra now allows `mcp>=1.10,<3`.
+- `relay_run` no longer sends per-provider log notifications (deprecated in SDK 2.x).
+
+### Fixed
+- `cli-relay mcp` reported "missing optional dependency" when an incompatible `mcp`
+  version was installed; it now says which versions are supported.
+
 ## [0.1.0] - 2026-11-15
 
 ### Added
@@ -31,5 +42,6 @@ All notable changes to this project are documented here. The format follows
   requested over MCP are capped by `[mcp] max_permission` (default `read_only`).
 - TOML configuration.
 
-[Unreleased]: https://github.com/mustikon/cli-relay/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/mustikon/cli-relay/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/mustikon/cli-relay/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mustikon/cli-relay/releases/tag/v0.1.0

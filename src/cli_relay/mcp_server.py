@@ -1,39 +1,50 @@
 """Expose the relay as an MCP server (stdio), so any MCP client - Claude Code, Codex,
 Antigravity, a voice assistant - can delegate a task and get fallback for free.
 
-Requires the optional dependency: ``pip install "cli-relay[mcp]"``.
+Requires the optional dependency: ``pip install "cli-relay[mcp]"``. Works with the MCP
+Python SDK 1.x (``FastMCP``) and 2.x (``MCPServer``).
 """
 
-# No ``from __future__ import annotations`` here: FastMCP inspects the tool signatures at
-# runtime and must see the real ``Context`` class, which is imported lazily below.
+from __future__ import annotations
 
-import contextlib
+import importlib
 from pathlib import Path
 from typing import Any
 
 from cli_relay.config import Config
-from cli_relay.events import Completed, Failed, Skipped, Started, Switched
+from cli_relay.events import Completed, Failed, Skipped, Switched
 from cli_relay.models import Permission, Task
 from cli_relay.relay import Relay
 
 
-def build_server(config: Config) -> Any:
+def _server_class() -> Any:
+    """``MCPServer`` from mcp 2.x, else ``FastMCP`` from mcp 1.x."""
+    for module, name in (("mcp.server.mcpserver", "MCPServer"), ("mcp.server.fastmcp", "FastMCP")):
+        try:
+            return getattr(importlib.import_module(module), name)
+        except (ImportError, AttributeError):
+            continue
     try:
-        from mcp.server.fastmcp import Context, FastMCP
-    except ImportError as exc:  # pragma: no cover - depends on optional extra
+        import mcp  # noqa: F401
+    except ImportError:
         raise SystemExit(
             "cli-relay mcp needs the optional dependency: pip install 'cli-relay[mcp]'"
-        ) from exc
+        ) from None
+    raise SystemExit(
+        "cli-relay mcp: the installed 'mcp' package has neither MCPServer (2.x) nor FastMCP "
+        "(1.x); install a supported version: pip install 'cli-relay[mcp]'"
+    )
 
-    server = FastMCP("cli-relay")
 
-    @server.tool()
+def build_server(config: Config) -> Any:
+    server = _server_class()("cli-relay")
+
+    @server.tool()  # type: ignore[untyped-decorator,misc,unused-ignore]
     async def relay_run(
         prompt: str,
         cwd: str | None = None,
         providers: list[str] | None = None,
         permission: str = "read_only",
-        ctx: Context[Any, Any, Any] | None = None,
     ) -> dict[str, Any]:
         """Run a coding task on the first available agent CLI (Claude Code, Antigravity,
         Codex, API...), switching to the next one if a provider hits its usage limit.
@@ -53,9 +64,6 @@ def build_server(config: Config) -> Any:
                 switches.append(f"{event.provider} -> {event.to_provider} ({event.reason})")
             elif isinstance(event, Skipped):
                 skipped.append(f"{event.provider}: {event.reason}")
-            elif isinstance(event, Started) and ctx is not None:
-                with contextlib.suppress(Exception):  # no request context when called directly
-                    await ctx.info(f"{event.provider} started")
             elif isinstance(event, Completed | Failed):
                 final = event
         if isinstance(final, Completed):
@@ -76,7 +84,7 @@ def build_server(config: Config) -> Any:
             "skipped": skipped,
         }
 
-    @server.tool()
+    @server.tool()  # type: ignore[untyped-decorator,misc,unused-ignore]
     def relay_status() -> dict[str, Any]:
         """Show which agent providers are installed, and which are rate-limited and until when."""
         quota = config.quota()
@@ -99,4 +107,4 @@ def build_server(config: Config) -> Any:
 
 
 def serve(config: Config) -> None:
-    build_server(config).run()
+    build_server(config).run(transport="stdio")
