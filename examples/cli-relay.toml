@@ -36,7 +36,7 @@ permission = "edit"           # upper bound; a task never gets more on this prov
 # model = "..."
 
 [providers.codex]
-# experimental adapter
+# uses the codex CLI on PATH or the one bundled with the Codex desktop app
 
 [providers.openrouter]
 type = "openai"               # text-only fallback, no tools
