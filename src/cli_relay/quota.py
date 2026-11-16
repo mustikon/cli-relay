@@ -82,7 +82,11 @@ class QuotaTracker:
             }
             self._save()
         elif isinstance(event, Failed) and event.kind is FailureKind.RATE_LIMIT:
-            until = event.resets_at or (event.at + self.default_cooldown_s)
+            until = (
+                event.resets_at
+                if event.resets_at and event.resets_at > event.at
+                else event.at + self.default_cooldown_s
+            )
             self.block(event.provider, until, event.message[:300] or "rate limited")
 
     def block(self, provider: str, until: float, reason: str) -> None:

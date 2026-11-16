@@ -69,7 +69,10 @@ def test_parse_file(tmp_path: Path) -> None:
         config_mod.parse({"providers": {"x": {"type": "nope"}}}).adapters(["x"])
 
 
-def test_missing_explicit_config(tmp_path: Path) -> None:
+def test_missing_explicit_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fallback = tmp_path / "user-config.toml"
+    fallback.write_text('order = ["claude"]\n', encoding="utf-8")
+    monkeypatch.setattr(config_mod, "user_config_path", lambda: fallback)
     with pytest.raises(FileNotFoundError):
         config_mod.load(tmp_path / "missing.toml")
 

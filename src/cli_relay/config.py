@@ -32,8 +32,11 @@ def user_config_path() -> Path:
 
 
 def find_config(explicit: str | Path | None = None) -> Path | None:
+    if explicit:
+        if not Path(explicit).is_file():
+            raise FileNotFoundError(f"config file not found: {explicit}")
+        return Path(explicit)
     candidates = [
-        explicit,
         os.environ.get("CLI_RELAY_CONFIG"),
         Path("cli-relay.toml"),
         user_config_path(),
@@ -41,8 +44,6 @@ def find_config(explicit: str | Path | None = None) -> Path | None:
     for candidate in candidates:
         if candidate and Path(candidate).is_file():
             return Path(candidate)
-    if explicit:
-        raise FileNotFoundError(f"config file not found: {explicit}")
     return None
 
 
