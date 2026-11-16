@@ -6,6 +6,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-16
+
+### Added
+- Images: `Task.images` / `cli-relay run --image FILE` (png, jpg, gif, webp; repeatable)
+  and `images` on the MCP `relay_run` tool. Claude Code gets them as real attachments
+  (one `--input-format stream-json` message with image blocks, so no file-read
+  permission is needed), Codex through `--image`, Antigravity through `--add-dir` plus
+  the paths in the prompt, OpenAI-compatible endpoints in the vision message format.
+  Verified live on all three CLIs.
+- Extra directories: `Task.add_dirs` / `--add-dir DIR`, passed as `--add-dir` to Claude
+  Code, Codex and Antigravity.
+- A missing or unsupported image, or a missing directory, fails at once with
+  `Failed(provider="relay")` instead of being tried on every provider.
+
+### Fixed
+- `find_config`: an explicit config path that does not exist raises instead of falling
+  back to another config file.
+- Quota tracker: a rate-limit reset time already in the past falls back to the default
+  cooldown.
+
 ## [0.1.1] - 2026-11-15
 
 ### Changed
@@ -42,6 +62,7 @@ All notable changes to this project are documented here. The format follows
   requested over MCP are capped by `[mcp] max_permission` (default `read_only`).
 - TOML configuration.
 
-[Unreleased]: https://github.com/mustikon/cli-relay/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/mustikon/cli-relay/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mustikon/cli-relay/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/mustikon/cli-relay/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mustikon/cli-relay/releases/tag/v0.1.0

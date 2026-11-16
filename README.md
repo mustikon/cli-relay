@@ -76,6 +76,8 @@ cli-relay run "explain src/auth.py"                # read-only by default
 cli-relay run - < task.md --cwd ./repo --permission edit
 cli-relay run "continue" --resume claude=SESSION_ID
 cli-relay run "..." --providers antigravity,claude --format ndjson
+cli-relay run "what is wrong on this screen?" --image screen.png   # png, jpg, gif, webp
+cli-relay run "compare with the spec" --cwd ./app --add-dir ./docs
 cli-relay reset [provider]                         # forget recorded limits
 ```
 
@@ -140,7 +142,7 @@ claude mcp add cli-relay -- cli-relay mcp
 ```
 
 The server exposes two tools:
-* `relay_run(prompt, cwd?, providers?, permission?)` returns `{ok, provider, text, session_id, switches, skipped}`.
+* `relay_run(prompt, cwd?, providers?, permission?, images?)` returns `{ok, provider, text, session_id, switches, skipped}`.
 * `relay_status()` returns installed providers and their known limits.
 
 By default an MCP client can only request `read_only` work, whatever it asks for.

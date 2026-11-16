@@ -131,6 +131,27 @@ def test_cli_prompt_from_stdin_is_utf8(
     assert json.loads(record.read_text(encoding="utf-8"))["stdin"] == "Почини тест — срочно"
 
 
+def test_cli_attaches_images(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    record = tmp_path / "rec.json"
+    monkeypatch.setenv("FAKE_CLI_RECORD", str(record))
+    shot = tmp_path / "screen.png"
+    shot.write_bytes(b"\x89PNG\r\n\x1a\n")
+    extra = tmp_path / "docs"
+    extra.mkdir()
+    cfg = write_config(tmp_path, "claude_success.ndjson", "agy_success.ndjson")
+    args = ["--config", str(cfg), "run", "что тут?", "--image", str(shot)]
+    assert main([*args, "--add-dir", str(extra)]) == 0
+    seen = json.loads(record.read_text(encoding="utf-8"))
+    assert "--input-format" in seen["argv"] and str(extra.resolve()) in seen["argv"]
+    content = json.loads(seen["stdin"])["message"]["content"]
+    assert content[0]["type"] == "image" and content[-1]["text"] == "что тут?"
+    # a missing image fails at once, without trying any provider
+    assert main(["--config", str(cfg), "run", "x", "--image", str(tmp_path / "no.png")]) == 1
+    assert "image not found" in capsys.readouterr().err
+
+
 def test_cli_bad_resume(tmp_path: Path) -> None:
     cfg = write_config(tmp_path, "claude_success.ndjson", "agy_success.ndjson")
     assert main(["--config", str(cfg), "run", "x", "--resume", "oops"]) == 2

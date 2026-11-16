@@ -8,6 +8,7 @@ only - no HTTP client dependency.
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import json
 import os
@@ -21,7 +22,7 @@ from typing import Any, ClassVar
 from cli_relay.adapters.base import Adapter
 from cli_relay.errors import classify, reset_hint
 from cli_relay.events import Completed, Event, Failed, FailureKind, Started, TextDelta
-from cli_relay.models import Task
+from cli_relay.models import IMAGE_TYPES, Task
 
 _DONE = object()
 
@@ -44,10 +45,29 @@ class OpenAICompatAdapter(Adapter):
         if not ok:
             yield Failed(provider=self.name, kind=FailureKind.NOT_INSTALLED, message=reason)
             return
-        messages: list[dict[str, str]] = []
+        if problem := task.check_files():
+            yield Failed(provider=self.name, kind=FailureKind.ERROR, message=problem)
+            return
+        messages: list[dict[str, Any]] = []
         if task.system_prompt:
             messages.append({"role": "system", "content": task.system_prompt})
-        messages.append({"role": "user", "content": task.prompt})
+        if task.images:
+            # OpenAI vision format; endpoints whose model has no vision answer with an
+            # error, which the relay treats like any other failure.
+            content: list[dict[str, Any]] = [{"type": "text", "text": task.prompt}]
+            for image in task.images:
+                try:
+                    raw = image.read_bytes()
+                except OSError as exc:
+                    yield Failed(provider=self.name, kind=FailureKind.ERROR, message=str(exc))
+                    return
+                data = base64.b64encode(raw).decode("ascii")
+                media = IMAGE_TYPES[image.suffix.lower()]
+                data_url = f"data:{media};base64,{data}"
+                content.append({"type": "image_url", "image_url": {"url": data_url}})
+            messages.append({"role": "user", "content": content})
+        else:
+            messages.append({"role": "user", "content": task.prompt})
         body = json.dumps(
             {"model": self.settings.model, "messages": messages, "stream": True}
         ).encode()

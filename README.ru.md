@@ -71,6 +71,8 @@ cli-relay run "объясни src/auth.py"                # по умолчан�
 cli-relay run - < task.md --cwd ./repo --permission edit
 cli-relay run "продолжай" --resume claude=SESSION_ID
 cli-relay run "..." --providers antigravity,claude --format ndjson
+cli-relay run "что не так на этом экране?" --image screen.png     # png, jpg, gif, webp
+cli-relay run "сравни со спецификацией" --cwd ./app --add-dir ./docs
 cli-relay reset [provider]                         # забыть записанные лимиты
 ```
 

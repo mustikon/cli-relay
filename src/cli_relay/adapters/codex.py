@@ -64,6 +64,10 @@ class CodexAdapter(CliAdapter):
         argv = [*exe, "exec", *_SANDBOX[self.permission_for(task)]]
         if self.settings.model:
             argv += ["--model", self.settings.model]
+        # `--image` takes several values: in the "--image FILE" form it would swallow the
+        # `resume SESSION` that may follow, so each value is bound with "=".
+        argv += [f"--image={image.resolve()}" for image in task.images]
+        argv += [f"--add-dir={folder.resolve()}" for folder in task.add_dirs]
         argv += self.settings.extra_args
         if session := task.resume.get(self.name):
             argv += ["resume", session]

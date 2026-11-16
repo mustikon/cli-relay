@@ -111,7 +111,14 @@ class CliAdapter(Adapter):
                 provider=self.name, kind=FailureKind.NOT_INSTALLED, message=self.available()[1]
             )
             return
-        inv = self.build(task, exe)
+        if problem := task.check_files():
+            yield Failed(provider=self.name, kind=FailureKind.ERROR, message=problem)
+            return
+        try:
+            inv = self.build(task, exe)
+        except OSError as exc:  # e.g. an image locked by another process on Windows
+            yield Failed(provider=self.name, kind=FailureKind.ERROR, message=str(exc))
+            return
         state = ParseState()
         try:
             try:
@@ -146,6 +153,21 @@ class CliAdapter(Adapter):
             for path in inv.temp_files:
                 with contextlib.suppress(OSError):
                     os.unlink(path)
+
+
+def image_dirs(task: Task) -> list[str]:
+    """Extra directories plus the folders of the attached images, without duplicates."""
+    dirs = [str(p.resolve()) for p in task.add_dirs]
+    dirs += [str(p.resolve().parent) for p in task.images]
+    return list(dict.fromkeys(dirs))
+
+
+def image_note(task: Task) -> str:
+    """Prompt suffix naming the attached images, for CLIs that read them as files."""
+    if not task.images:
+        return ""
+    listed = "\n".join(f"- {p.resolve()}" for p in task.images)
+    return f"\n\nAttached images: open and look at each one before answering.\n{listed}"
 
 
 def short(value: object, limit: int = 120) -> str:

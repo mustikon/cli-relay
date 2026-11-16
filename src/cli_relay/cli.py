@@ -60,6 +60,22 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--timeout", type=float, help="seconds per provider attempt")
     run.add_argument(
+        "--image",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="FILE",
+        help="attach an image (png, jpg, gif, webp); repeatable",
+    )
+    run.add_argument(
+        "--add-dir",
+        action="append",
+        default=[],
+        type=Path,
+        metavar="DIR",
+        help="another directory the agent may use besides --cwd; repeatable",
+    )
+    run.add_argument(
         "--format",
         choices=["text", "ndjson"],
         default="text",
@@ -132,6 +148,8 @@ async def _run(args: argparse.Namespace, config: Config) -> int:
         system_prompt=args.system,
         resume=resume,
         timeout_s=args.timeout,
+        images=tuple(args.image),
+        add_dirs=tuple(args.add_dir),
     )
     last: Event | None = None
     async for event in relay.run(task):

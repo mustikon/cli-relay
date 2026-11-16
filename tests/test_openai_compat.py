@@ -4,6 +4,7 @@ import json
 import threading
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import pytest
 
@@ -75,6 +76,19 @@ async def test_streams_text(server: str, monkeypatch: pytest.MonkeyPatch) -> Non
         "role": "system",
         "content": "be nice",
     }
+
+
+async def test_images_use_the_vision_format(server: str, tmp_path: Path) -> None:
+    Handler.mode = "ok"
+    shot = tmp_path / "screen.png"
+    shot.write_bytes(b"\x89PNG\r\n\x1a\n")
+    events = [e async for e in adapter(server).run(Task(prompt="что это?", images=(shot,)))]
+    assert isinstance(events[-1], Completed)
+    body = Handler.seen[0]["body"]
+    assert isinstance(body, dict)
+    content = body["messages"][-1]["content"]
+    assert content[0] == {"type": "text", "text": "что это?"}
+    assert content[1]["image_url"]["url"].startswith("data:image/png;base64,")
 
 
 async def test_rate_limit(server: str) -> None:

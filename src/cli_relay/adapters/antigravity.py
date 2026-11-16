@@ -10,7 +10,14 @@ from __future__ import annotations
 import os
 from typing import Any, ClassVar
 
-from cli_relay.adapters.base import CliAdapter, Invocation, ParseState, short
+from cli_relay.adapters.base import (
+    CliAdapter,
+    Invocation,
+    ParseState,
+    image_dirs,
+    image_note,
+    short,
+)
 from cli_relay.errors import classify, reset_hint
 from cli_relay.events import Completed, Event, Failed, Started, TextDelta, ToolActivity
 from cli_relay.models import Permission, Task
@@ -29,9 +36,11 @@ class AntigravityAdapter(CliAdapter):
 
     def build(self, task: Task, exe: list[str]) -> Invocation:
         inv = Invocation(argv=[*exe])
-        prompt = task.prompt
+        prompt = task.prompt + image_note(task)
         if task.system_prompt:
             prompt = f"{task.system_prompt.strip()}\n\n---\n\n{prompt}"
+        for folder in image_dirs(task):
+            inv.argv += ["--add-dir", folder]
         if len(prompt) > _MAX_ARG_PROMPT:
             path = self.temp_text_file(inv, prompt)
             inv.argv += ["--add-dir", os.path.dirname(path)]

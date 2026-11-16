@@ -45,6 +45,75 @@ def test_claude_prompt_goes_to_stdin_never_argv() -> None:
             Path(path).unlink()
 
 
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+
+
+def test_images_and_extra_dirs(tmp_path: Path) -> None:
+    shot = tmp_path / "shots" / "screen.png"
+    shot.parent.mkdir()
+    shot.write_bytes(PNG)
+    extra = tmp_path / "docs"
+    extra.mkdir()
+    task = Task(prompt="что на экране?", images=(shot,), add_dirs=(extra,))
+    assert task.check_files() is None
+
+    claude = ClaudeAdapter(settings("claude")).build(task, ["claude"])
+    assert "--input-format stream-json" in " ".join(claude.argv)
+    assert claude.argv[claude.argv.index("--add-dir") + 1] == str(extra.resolve())
+    assert claude.stdin is not None
+    message = json.loads(claude.stdin.decode("utf-8"))
+    content = message["message"]["content"]
+    assert content[0]["type"] == "image" and content[0]["source"]["media_type"] == "image/png"
+    assert content[-1] == {"type": "text", "text": "что на экране?"}
+    assert str(shot) not in " ".join(claude.argv)  # attached, not a path to read
+
+    codex = CodexAdapter(settings("codex")).build(task, ["codex"]).argv
+    assert f"--image={shot.resolve()}" in codex and f"--add-dir={extra.resolve()}" in codex
+    # "--image FILE" would swallow "resume SESSION": values are bound with "="
+    resumed = CodexAdapter(settings("codex")).build(
+        Task(prompt="и дальше?", images=(shot,), resume={"codex": "T-1"}), ["codex"]
+    )
+    argv = resumed.argv
+    assert argv[argv.index("resume") + 1] == "T-1"
+    assert argv.index(f"--image={shot.resolve()}") < argv.index("resume")
+
+    agy = AntigravityAdapter(settings("antigravity")).build(task, ["agy"]).argv
+    dirs = [agy[i + 1] for i, a in enumerate(agy) if a == "--add-dir"]
+    assert dirs == [str(extra.resolve()), str(shot.parent.resolve())]
+    prompt = agy[agy.index("-p") + 1]
+    assert prompt.startswith("что на экране?") and str(shot.resolve()) in prompt
+
+    plain = ClaudeAdapter(settings("claude")).build(Task(prompt="hi"), ["claude"])
+    assert "--input-format" not in plain.argv and plain.stdin == b"hi"
+
+
+def test_bad_attachments_are_refused(tmp_path: Path) -> None:
+    text = tmp_path / "notes.txt"
+    text.write_text("x")
+    assert "not found" in (Task(prompt="x", images=(tmp_path / "no.png",)).check_files() or "")
+    assert "image type" in (Task(prompt="x", images=(text,)).check_files() or "")
+    assert "directory" in (Task(prompt="x", add_dirs=(tmp_path / "nope",)).check_files() or "")
+    # a secret renamed to .png is not an image: it is never sent to a provider
+    secret = tmp_path / "id_rsa.png"
+    secret.write_text("-----BEGIN OPENSSH PRIVATE KEY-----")
+    assert "does not match" in (Task(prompt="x", images=(secret,)).check_files() or "")
+    for head in (b"\xff\xd8\xff\xe0", b"GIF89a", b"RIFF\x00\x00\x00\x00WEBPVP8 "):
+        ok = tmp_path / "ok.jpg"
+        ok.write_bytes(head + b"\x00" * 16)
+        assert Task(prompt="x", images=(ok,)).check_files() is None
+
+
+async def test_relay_stops_before_any_provider_on_a_bad_image(tmp_path: Path) -> None:
+    from cli_relay.quota import QuotaTracker
+    from cli_relay.relay import Relay
+
+    adapter = ClaudeAdapter(settings("claude", command=["definitely-not-installed-cli"]))
+    relay = Relay([adapter], QuotaTracker(tmp_path / "state.json"))
+    final, events = await relay.run_to_end(Task(prompt="x", images=(tmp_path / "x.png",)))
+    assert isinstance(final, Failed) and final.provider == "relay"
+    assert "image not found" in final.message and len(events) == 1
+
+
 @pytest.mark.parametrize(
     ("task_perm", "cap", "mode"),
     [

@@ -16,7 +16,7 @@ from cli_relay.events import (
 from cli_relay.models import Permission, ProviderSettings, Task
 from cli_relay.relay import Relay, RelayPolicy
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 __all__ = [
     "Completed",

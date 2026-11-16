@@ -45,17 +45,25 @@ def build_server(config: Config) -> Any:
         cwd: str | None = None,
         providers: list[str] | None = None,
         permission: str = "read_only",
+        images: list[str] | None = None,
     ) -> dict[str, Any]:
         """Run a coding task on the first available agent CLI (Claude Code, Antigravity,
         Codex, API...), switching to the next one if a provider hits its usage limit.
 
         permission: read_only (default), edit, or full. The server caps it at the
         configured ``[mcp] max_permission`` (read_only unless the user raised it).
+        images: paths of image files (png, jpg, gif, webp) to show the agent; they are
+        sent to the provider that runs the task.
         Returns which provider finished, its final answer and any switches that happened.
         """
         granted = Permission(permission).capped_by(config.mcp_max_permission)
         relay = Relay(config.adapters(providers), config.quota(), config.policy)
-        task = Task(prompt=prompt, cwd=Path(cwd) if cwd else None, permission=granted)
+        task = Task(
+            prompt=prompt,
+            cwd=Path(cwd) if cwd else None,
+            permission=granted,
+            images=tuple(Path(p) for p in images or ()),
+        )
         switches: list[str] = []
         skipped: list[str] = []
         final: Completed | Failed | None = None

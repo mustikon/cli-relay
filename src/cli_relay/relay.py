@@ -63,6 +63,10 @@ class Relay:
         The stream ends with the provider's :class:`Completed` event, or with a
         :class:`Failed` event from provider ``"relay"`` when every provider failed.
         """
+        if problem := task.check_files():
+            # the same bad path would fail on every provider: stop before the first
+            yield Failed(provider="relay", kind=FailureKind.ERROR, message=problem)
+            return
         log = HandoffLog(task.prompt)
         previous: str | None = None
         last_failure: Failed | None = None

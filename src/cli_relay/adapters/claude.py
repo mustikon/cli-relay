@@ -7,6 +7,8 @@ the command line (``claude`` is an npm ``.cmd`` shim on Windows).
 
 from __future__ import annotations
 
+import base64
+import json
 from typing import Any, ClassVar
 
 from cli_relay.adapters.base import CliAdapter, Invocation, ParseState, short
@@ -21,7 +23,7 @@ from cli_relay.events import (
     TextDelta,
     ToolActivity,
 )
-from cli_relay.models import Permission, Task
+from cli_relay.models import IMAGE_TYPES, Permission, Task
 
 _PERMISSION_MODE = {
     Permission.READ_ONLY: "dontAsk",  # pre-approved reads only, everything else denied
@@ -48,6 +50,13 @@ class ClaudeAdapter(CliAdapter):
             "none",
         ]
         inv = Invocation(argv=argv, stdin=task.prompt.encode("utf-8"))
+        if task.images:
+            # Real attachments: one stream-json user message with image blocks, so the
+            # agent sees the pictures without needing a file-read permission.
+            argv += ["--input-format", "stream-json"]
+            inv.stdin = _image_message(task)
+        for folder in task.add_dirs:
+            argv += ["--add-dir", str(folder.resolve())]
         if self.settings.model:
             argv += ["--model", self.settings.model]
         if session := task.resume.get(self.name):
@@ -151,6 +160,24 @@ class ClaudeAdapter(CliAdapter):
             resets_at=state.resets_at or reset_hint(message),
             session_id=session,
         )
+
+
+def _image_message(task: Task) -> bytes:
+    content: list[dict[str, Any]] = []
+    for image in task.images:
+        content.append(
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": IMAGE_TYPES[image.suffix.lower()],
+                    "data": base64.b64encode(image.read_bytes()).decode("ascii"),
+                },
+            }
+        )
+    content.append({"type": "text", "text": task.prompt})
+    message = {"type": "user", "message": {"role": "user", "content": content}}
+    return (json.dumps(message, ensure_ascii=False) + "\n").encode("utf-8")
 
 
 def _tool_detail(data: object) -> str:
